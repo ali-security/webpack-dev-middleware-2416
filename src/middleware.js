@@ -11,6 +11,7 @@ const {
   setHeaderForResponse,
   setStatusCode,
   send,
+  sendError,
 } = require("./utils/compatibleAPI");
 const ready = require("./utils/ready");
 
@@ -95,10 +96,23 @@ function wrapper(context) {
     }
 
     async function processRequest() {
+      /** @type {import("./utils/getFilenameFromUrl").Extra} */
+      const extra = {};
       const filename = getFilenameFromUrl(
         context,
-        /** @type {string} */ (req.url)
+        /** @type {string} */ (req.url),
+        extra
       );
+
+      if (extra.errorCode) {
+        if (extra.errorCode === 403) {
+          context.logger.error(`Malicious path "${filename}".`);
+        }
+
+        sendError(req, res, extra.errorCode);
+
+        return;
+      }
 
       if (!filename) {
         await goNext();
